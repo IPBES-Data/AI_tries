@@ -1,9 +1,41 @@
 ---
-title: "AI Tries"
-format: html
+title: AI Assessment
+subtitle: Assessment of LLM based methods for use in IPBES
+date: today
+author:
+  - name: Rainer M Krug 
+    id: rmk
+    orcid: 0000-0002-7490-0066
+    email: Rainer@krugs.de
+    affiliation: 
+      - name: University of Zürich
+        city: Zürich
+        state: ZH
+        url: www.uzh.ch
+    roles: [author, editor]
+abstract: > 
+  This probably will be added later
+license: "CC BY"
+citation: 
+  type: report
+  doi: xxxxxxxxxxxxxx
+doi: xxxxxxxxxxxxxx
+version: 0.1.0
+
+format:
+    html:
+        toc: true
+        toc-depth: 4
+        toc_expand: true
+        embed-resources: false
+        code-fold: true
+        code-summary: 'Show the code'
+        keep-md: false
+
 params:
   corpus: !expr file.path(".", "..", "Assessments", "Transformative Change", "IPBES_TCA_Corpus", "ch5_subsidies_reform", "data", "corpus")
   n_samples: 20
+  n_analysis: 3
   rand_seed: 14
 ---  
 
@@ -15,7 +47,10 @@ Here are some links in no particular order:
 
 - [https://towardsdatascience.com/running-llama-2-on-cpu-inference-for-document-q-a-3d636037a3d8](https://towardsdatascience.com/running-llama-2-on-cpu-inference-for-document-q-a-3d636037a3d8)
 
-## General info about Llama trsaining
+
+[Llama on Meta]https://llama.meta.com)
+
+## General info about Llama training
 - [datacamp](https://www.datacamp.com/tutorial/llama3-fine-tuning-locally)
 - [hugginface](https://huggingface.co/blog/stackllama)
 
@@ -51,12 +86,13 @@ I am using a subsample of n random papers from the the IPBES TCA subsidies refor
 ```{r}
 #| label: get_paper
 
-set.seed(params$rand_seed)
 
 fn <- file.path(".", "data", "papers.rds")
+
 if (file.exists(fn)) {
   papers <- readRDS(fn)
 } else {
+  set.seed(params$rand_seed)
   papers <- params$corpus |>
     IPBES.R::read_corpus() |>
     dplyr::filter(
@@ -77,12 +113,12 @@ if (file.exists(fn)) {
 }
 ```
 
-## Summarizing abstracts 
+# Summarizing abstracts 
 
 Based on [Use R to prompt a local LLM with ollamar](https://blog.stephenturner.us/p/use-r-to-prompt-a-local-llm-with)
 
 
-### Preparation
+## Preparation
 ```{r}
 #| label: preparation
 
@@ -110,29 +146,33 @@ summarized <- papers |>
 
 ```
 
-### Serial
+## Serial
 ```{r}
 #| label: serial
 
 fn <- file.path(".", "data", "summarized_seriell.rds")
 
-tic()
+if (file.exists(fn)) {
+  summarized <- readRDS(fn)
+} else {
+  tic()
 
-summarized$response <- pbapply::pblapply(
-  summarized$prompt,
-  function(x) {
-    ollamar::generate(
-      model = "llama3.1",
-      prompt = x,
-      output = "text"
-    )
-  }
-) |>
-  unlist()
+  summarized$response <- pbapply::pblapply(
+    summarized$prompt,
+    function(x) {
+      ollamar::generate(
+        model = "llama3.1",
+        prompt = x,
+        output = "text"
+      )
+    }
+  ) |>
+    unlist()
 
-toc()
+  toc()
 
-saveRDS(summarized, fn)
+  saveRDS(summarized, fn)
+}
 
 summarized |>
   select(
@@ -146,52 +186,56 @@ summarized |>
 
 ```
 
-### Parallel
+## Parallel
 ```{r}
 #| label: parallel
 
 fn <- file.path(".", "data", "summarized_parallel.rds")
 
-tic()
+if (file.exists(fn)) {
+  summarized <- readRDS(fn)
+} else {
+  tic()
 
-reqs <- lapply(
-  summarized$prompt,
-  function(x) {
-    ollamar::generate(
-      model = "llama3.1",
-      prompt = x,
-      output = "req"
-    )
-  }
-)
-
-resps <- reqs |>
-  httr2::req_perform_parallel(
-    progress = TRUE
+  reqs <- lapply(
+    summarized$prompt,
+    function(x) {
+      ollamar::generate(
+        model = "llama3.1",
+        prompt = x,
+        output = "req"
+      )
+    }
   )
 
-summarized$response <- sapply(
-  resps,
-  ollamar::resp_process,
-  "text"
-)
+  resps <- reqs |>
+    httr2::req_perform_parallel(
+      progress = TRUE
+    )
 
-toc()
+  summarized$response <- sapply(
+    resps,
+    ollamar::resp_process,
+    "text"
+  )
 
-saveRDS(summarized, fn)
+  toc()
+
+  saveRDS(summarized, fn)
+}
 
 summarized |>
-  select(
+  dplyr::select(
     title,
     response
   ) |>
-  mutate(
+  dplyr::mutate(
     response = gsub("\n", " ", response)
   ) |>
   knitr::kable()
 ```
 
-## Sentiment Analysis
+# Sentiment Analysis
 
 Inspired by the sentiment analysis at https://github.com/hauselin/ollama-r/
 
@@ -200,68 +244,273 @@ Inspired by the sentiment analysis at https://github.com/hauselin/ollama-r/
 
 fn <- file.path(".", "data", "sentiments.rds")
 
-reqs <- lapply(
-  1:nrow(papers),
-  function(i) {
-    paste0(
-      "\n\nI give you the title and abstract of a scientific paper.",
-      "\n\nYour only task/role is to evaluate the sentiment of these towards subsidies.",
-      "\n\nYour response should be a valid json with the following info.",
-      "\n\n   id: the id of the paper.",
-      "\n\n   sentiment: the identified response. It should be one of the following:'positive' or 'negative', or, if you find no information to evaluate the sentiment of the text, 'unknown'.",
-      "\n\n   strength: if sentiment is 'positive' or 'negative', a score from -10 to 10 for the sentiment (-10 most negative, 10 most positive), , otherwise -99 if sentiment is unknown,",
-      "\n\n   score: if sentiment is 'positive' or 'negative', a value how confident you are in your assessment, ranging from 0 = 'not confident at all' to 10 = 'very confident', otherwise -99 if sentiment is unknown,",
-      "\n\n   explanation: an explanation why you think the sentiment is that way. If the sentiment is 'unknown',",
-      "\n\n   summary: a 1 sentence summary of the title and abstract, irrespective of the sentiment.",
-      "\n\nDo not put anything in front or behind the valid json.",
-      "\n\nDo not halucinate.",
-      "\n\nBase tour response only on the information I give you.",
-      "\n\nDo not summarise the information.",
-      "\n\nThe id is:", papers$id[[i]],
-      "\n\nThe titel is:", papers$title[[i]],
-      "\n\nThe abstract is:", substr(papers$abstract[[i]], 1, 3000)
-    ) |>
-      ollamar::generate(
-        model = "llama3.1",
-        output = "req"
-      )
-  }
-)
-
-tic()
-
-sentiments <- httr2::req_perform_parallel(
-  reqs,
-  progress = TRUE
-) |>
-  sapply(
-    function(resp) {
-      ollamar::resp_process(
-        resp,
-        output = "text"
-      )
+if (file.exists(fn)) {
+  sentiments <- readRDS(fn)
+} else {
+  reqs <- lapply(
+    1:nrow(papers),
+    function(i) {
+      paste0(
+        "\n\nI give you the title and abstract of a scientific paper.",
+        "\n\nYour only task/role is to evaluate the sentiment of these towards subsidies.",
+        "\n\nYour response should be a valid json with the following info.",
+        "\n\n   id: the id of the paper as provided.",
+        "\n\n   sentiment: the identified response. It should be one of the following:'positive' or 'negative', or, if you find no information to evaluate the sentiment of the text, 'unknown'.",
+        "\n\n   strength: if sentiment is 'positive' or 'negative', a score from -10 to 10 for the sentiment (-10 most negative, 10 most positive), , otherwise -99 if sentiment is unknown,",
+        "\n\n   score: if sentiment is 'positive' or 'negative', a value how confident you are in your assessment, ranging from 0 = 'not confident at all' to 10 = 'very confident', otherwise -99 if sentiment is unknown,",
+        "\n\n   explanation: an explanation why you think the sentiment is that way. If the sentiment is 'unknown',",
+        "\n\n   summary: a 1 sentence summary of the title and abstract, irrespective of the sentiment.",
+        "\n\nDo not put anything in front or behind the valid json.",
+        "\n\nDo not halucinate.",
+        "\n\nBase your response only on the information I give you.",
+        "\n\nDo not summarise the information.",
+        "\n\nThe id is:", papers$id[[i]],
+        "\n\nThe titel is:", papers$title[[i]],
+        "\n\nThe abstract is:", substr(papers$abstract[[i]], 1, 3000)
+      ) |>
+        ollamar::generate(
+          model = "llama3.1",
+          output = "req"
+        )
+    }
+  )
+  sentiments <- lapply(
+    1:params$n_analysis,
+    function(i) {
+      message(i, " of ", params$n_analysis, "...")
+      tic()
+      result <- httr2::req_perform_parallel(
+        reqs,
+        progress = TRUE
+      ) |>
+        sapply(
+          function(resp) {
+            ollamar::resp_process(
+              resp,
+              output = "text"
+            )
+          }
+        )
+      toc()
+      return(result)
     }
   )
 
-toc()
+  saveRDS(sentiments, fn)
+}
 
-sentiments_df <- lapply(
-  sentiments,
-  function(resp) {
-    jsonlite::fromJSON(
-      resp
-    )
-  }
-) |>
-  dplyr::bind_rows() |>
-  dplyr::mutate(
-    strength
+###
+
+fn <- file.path(".", "data", "sentiments_df.rds")
+
+if (file.exists(fn)) {
+  sentiments_df <- readRDS(fn)
+} else {
+  sentiments_df <- lapply(
+    sentiments,
+    function(sentiments) {
+      sentiments_df <- lapply(
+        sentiments,
+        function(resp) {
+          res <- jsonlite::fromJSON(
+            resp
+          )
+          res$strength <- as.integer(res$strength)
+          res$score <- as.integer(res$score)
+          return(res)
+        }
+      ) |>
+        dplyr::bind_rows()
+
+      sentiments_df[sentiments_df == -99] <- as.integer(NA)
+
+      return(sentiments_df)
+    }
   )
 
-sentiments_df[sentiments_df == -99] <- as.integer(NA)
+  saveRDS(sentiments_df, fn)
+}
 
-saveRDS(sentiments_df, fn)
-
-sentiments_df |>
+sentiments_df[[1]] |>
   knitr::kable()
 ```
+
+
+# Identification of country of study
+
+Here I will try to extract the country of the study fropm the abstract and title
+
+
+```{r}
+#| label: country_identification
+
+fn <- file.path(".", "data", "countries.rds")
+
+if (file.exists(fn)) {
+  countries <- readRDS(fn)
+} else {
+  reqs <- lapply(
+    1:nrow(papers),
+    function(i) {
+      paste0(
+        "\n\nI give you the title and abstract of a scientific paper.",
+        "\n\nYour only task/role is to determine the country or countries of the study.",
+        "\n\nStrip all linebreak and \\n from your response.",
+        "\n\nYour response should contain the following fields:",
+        "\n\n   id: the id of the paper as specified. Do not remove anything from the ID I give you.",
+        "\n\n   countries (a string): the countries as identified separated by commas, 'global' if the study has a global or worldwide scope, or, if you find no countries in the text, unknown.",
+        # "\n\n   c_3: three letters iso codes for the countries, if you find no countries or do not haver the iso three letter abbreviation the text, unknown.",
+        "\n\n   score (an integer value): a value how confident you are in your assessment, ranging from 0 = 'not confident at all' to 10 = 'very confident', otherwise -99. Always return a numeric value.",
+        # "\n\n   explanation: an explanation why you identified the countries, for all countries identified,",
+        # "\n\n   summary: a 1 sentence summary of the title and abstract, irrespective of the countries.",
+        "\n\nthe fields should be put into a valid json string.",
+        "\n\nDo only return the fieelds asked for.",
+        "\n\nDo not put anything in front or behind the answer.",
+        "\n\nDo not halucinate.",
+        "\n\nBase your response only on the information I give you.",
+        "\n\nThe ID is:", papers$id[[i]],
+        "\n\nThe titel is:", papers$title[[i]],
+        "\n\nThe abstract is:", substr(papers$abstract[[i]], 1, 3000)
+      ) |>
+        ollamar::generate(
+          model = "llama3.1",
+          output = "req"
+        )
+    }
+  )
+
+  countries <- lapply(
+    1:params$n_analysis,
+    function(i) {
+      message(i, " of ", params$n_analysis, "...")
+      tic()
+      result <- httr2::req_perform_parallel(
+        reqs,
+        progress = TRUE
+      ) |>
+        sapply(
+          function(resp) {
+            ollamar::resp_process(
+              resp,
+              output = "text"
+            )
+          }
+        )
+      toc()
+      return(result)
+    }
+  )
+
+  saveRDS(countries, fn)
+}
+
+###
+
+# fn <- file.path(".", "data", "countries_df.rds")
+
+# if (file.exists(fn)) {
+#   countries_df <- readRDS(fn)
+# } else {
+
+#   countries_df <- lapply(
+#     countries,
+#     function(countries) {
+#       countries_df <- lapply(
+#         countries,
+#         function(resp) {
+#           res <- jsonlite::fromJSON(
+#             resp
+#           )
+#           res$score <- as.integer(res$score)
+#           return(res)
+#         }
+#       ) |>
+#         dplyr::bind_rows()
+
+#       countries_df[countries_df == -99] <- as.integer(NA)
+
+#       return(countries_df)
+#     }
+#   )
+
+#   saveRDS(countries_df, fn)
+# }
+
+# countries_df[[1]] |>
+#   knitr::kable()
+```
+
+# Comparson multiple Analysis
+
+As an LLM gives different answers in each time it is asked, I will compare here the results from two different analysis runs.
+
+## Sentiment Analysis
+
+```{r}
+#| label: comparson_multiple_sens_runs
+
+
+
+sens <- readRDS(file.path(".", "data", "sentiments_df.rds")) |>
+  dplyr::bind_rows()
+
+sens |>
+  dplyr::summarise(
+    negative = sum(as.integer(sentiment == "negative")),
+    positive = sum(as.integer(sentiment == "positive")),
+    unknown = sum(as.integer(sentiment == "unknown")),
+    strength_min = min(strength, na.rm = TRUE),
+    strength_mean = round(mean(strength, na.rm = TRUE), digits = 1),
+    strength_max = max(strength, na.rm = TRUE),
+    score_min = min(score, na.rm = TRUE),
+    score_mean = round(mean(score, na.rm = TRUE, digits = 1)),
+    score_max = max(score, na.rm = TRUE),
+    .by = id
+  ) |>
+  dplyr::mutate(
+    neg_pos_unkn = paste(negative, positive, unknown, sep = " -- "),
+    strength = paste(strength_min, strength_mean, strength_max, sep = " -- "),
+    score = paste(score_min, score_mean, score_max, sep = " -- ")
+    # strength_min,
+    # strength_mean,
+    # strength_max,
+    # score_min,
+    # score_mean,
+    # score_max
+  ) |>
+  dplyr::select(
+    id,
+    neg_pos_unkn,
+    strength,
+    score
+  ) |>
+  knitr::kable(
+    align = c("l", "c", "c", "c")
+  )
+
+
+
+```
+
+
+## Countries Analysis
+
+This is not possible at the moment as llama returns sometimes invalid json for the answer.
+
+```{r}
+#| label: comparson_multiple_country_runs
+#| eval: false
+
+sens <- readRDS(file.path(".", "data", "countries_study_df.rds"))
+
+# sentiment <- tibble::tibble(
+#   equal = sens[[1]]$sentiment == sens[[2]]$sentiment,
+#   sens_1 = sens[[1]]$sentiment,
+#   score_1 = sens[[1]]$score,
+#   sens_2 = sens[[2]]$sentiment,
+#   score_2 = sens[[2]]$score
+# )
+```
+
+
+
