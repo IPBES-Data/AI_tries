@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.5.56">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>AI Tries</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="README_files/libs/clipboard/clipboard.min.js"></script>
+<script src="README_files/libs/quarto-html/quarto.js"></script>
+<script src="README_files/libs/quarto-html/popper.min.js"></script>
+<script src="README_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="README_files/libs/quarto-html/anchor.min.js"></script>
+<link href="README_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="README_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="README_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="README_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="README_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">AI Tries</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="introduction" class="level1">
+<h1>Introduction</h1>
+<p>Here I will try AI stuff, mainly using <a href="https://github.com/ollama/ollama">Ollama</a></p>
+<p>Here are some links in no particular order:</p>
+<ul>
+<li><a href="https://towardsdatascience.com/running-llama-2-on-cpu-inference-for-document-q-a-3d636037a3d8">https://towardsdatascience.com/running-llama-2-on-cpu-inference-for-document-q-a-3d636037a3d8</a></li>
+</ul>
+<p><a href="https://www.datacamp.com/tutorial/llama3-fine-tuning-locally">General info about Llama trsaining</a></p>
+</section>
+<section id="setup" class="level1">
+<h1>Setup</h1>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">#|</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">require</span>(pak)) {</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  pak<span class="sc">::</span><span class="fu">pkg_install</span>(<span class="st">"pak"</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: pak</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">require</span>(ollamar)) {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  pak<span class="sc">::</span><span class="fu">pkg_install</span>(<span class="st">"ollamar"</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: ollamar</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'ollamar'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:stats':
+
+    embed</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:methods':
+
+    show</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ollamar)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'dplyr'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:ollamar':
+
+    pull</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:stats':
+
+    filter, lag</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:base':
+
+    intersect, setdiff, setequal, union</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tictoc)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'tictoc'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:ollamar':
+
+    push</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(pbapply)</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(httr2)</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="fu">try</span>(</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  params <span class="ot">&lt;-</span> rmarkdown<span class="sc">::</span><span class="fu">yaml_front_matter</span>(<span class="st">"~/Documents_Local/git/IPBES_data_tsu/AI Tries/README.qmd"</span>)<span class="sc">$</span>params,</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">silent =</span> <span class="cn">TRUE</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="get-papers" class="level1">
+<h1>Get papers</h1>
+<p>I am using a subsample of n random papers from the the IPBES TCA subsidies reform corpus, published after 2000.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">14</span>)</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>fn <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="st">"."</span>, <span class="st">"data"</span>, <span class="st">"papers.rds"</span>)</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">file.exists</span>(fn)) {</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  papers <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(fn)</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>  papers <span class="ot">&lt;-</span> params<span class="sc">$</span>corpus <span class="sc">|&gt;</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>    IPBES.R<span class="sc">::</span><span class="fu">read_corpus</span>() <span class="sc">|&gt;</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>    dplyr<span class="sc">::</span><span class="fu">filter</span>(</span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>      publication_year <span class="sc">&gt;</span> <span class="dv">2000</span>,</span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">|&gt;</span></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>    dplyr<span class="sc">::</span><span class="fu">select</span>(</span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>      id,</span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>      doi,</span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> display_name,</span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>      <span class="at">abstract =</span> ab</span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">|&gt;</span></span>
+<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a>    dplyr<span class="sc">::</span><span class="fu">slice_sample</span>(</span>
+<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a>      <span class="at">n =</span> params<span class="sc">$</span>n_samples</span>
+<span id="cb17-20"><a href="#cb17-20" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">|&gt;</span></span>
+<span id="cb17-21"><a href="#cb17-21" aria-hidden="true" tabindex="-1"></a>    dplyr<span class="sc">::</span><span class="fu">collect</span>()</span>
+<span id="cb17-22"><a href="#cb17-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-23"><a href="#cb17-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">saveRDS</span>(papers, fn)</span>
+<span id="cb17-24"><a href="#cb17-24" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<section id="summarizing-abstracts" class="level2">
+<h2 class="anchored" data-anchor-id="summarizing-abstracts">Summarizing abstracts</h2>
+<p>Based on <a href="https://blog.stephenturner.us/p/use-r-to-prompt-a-local-llm-with">Use R to prompt a local LLM with ollamar</a></p>
+<section id="preparation" class="level3">
+<h3 class="anchored" data-anchor-id="preparation">Preparation</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>summarized <span class="ot">&lt;-</span> papers <span class="sc">|&gt;</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> title,</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>    abstract</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">abstract =</span> <span class="fu">substr</span>(abstract, <span class="dv">1</span>, <span class="dv">3000</span>),</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">across</span>(</span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>      <span class="fu">everything</span>(),</span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>      trimws</span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">prompt =</span> <span class="fu">paste</span>(</span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>      <span class="st">"</span><span class="sc">\n\n</span><span class="st">I'm going to give you a paper's title and abstract."</span>,</span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>      <span class="st">"Can you summarize this paper in 2 sentences?"</span>,</span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>      <span class="st">"</span><span class="sc">\n\n</span><span class="st">Title: "</span>, title, <span class="st">"</span><span class="sc">\n\n</span><span class="st">Abstract: "</span>, abstract,</span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>      <span class="st">"</span><span class="sc">\n\n</span><span class="st">Only return the 2 sentence summary."</span>,</span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>      <span class="st">"</span><span class="sc">\n\n</span><span class="st">Do not put anything in front or after the summary."</span></span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="serial" class="level3">
+<h3 class="anchored" data-anchor-id="serial">Serial</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>fn <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="st">"."</span>, <span class="st">"data"</span>, <span class="st">"summarized_seriell.rds"</span>)</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="fu">tic</span>()</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>summarized<span class="sc">$</span>response <span class="ot">&lt;-</span> pbapply<span class="sc">::</span><span class="fu">pblapply</span>(</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>  summarized<span class="sc">$</span>prompt,</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">function</span>(x) {</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>    ollamar<span class="sc">::</span><span class="fu">generate</span>(</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>      <span class="at">model =</span> <span class="st">"llama3.1"</span>,</span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>      <span class="at">prompt =</span> x,</span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>      <span class="at">output =</span> <span class="st">"text"</span></span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">unlist</span>()</span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a><span class="fu">toc</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>97.597 sec elapsed</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(summarized, fn)</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>summarized <span class="sc">|&gt;</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>    title,</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>    response</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">response =</span> <span class="fu">gsub</span>(<span class="st">"</span><span class="sc">\n</span><span class="st">"</span>, <span class="st">" "</span>, response)</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>  knitr<span class="sc">::</span><span class="fu">kable</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<table class="caption-top table table-sm table-striped small">
+<colgroup>
+<col style="width: 24%">
+<col style="width: 75%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">title</th>
+<th style="text-align: left;">response</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Productivity Trends from 1890 to 2012 in Advanced Countries</td>
+<td style="text-align: left;">The paper examines productivity trends and convergence processes across 13 advanced countries from 1890-2012, highlighting two major productivity waves driven by innovation diffusion, including a significant wave following the second industrial revolution and a smaller one following the ICT revolution. Productivity levels were affected by various factors such as wars, global financial crises, technology shocks, and policy changes, leading to trend breaks and convergence irregularities.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Global Advisory Panel on the Future of Nursing (GAPFON) and Global Health</td>
+<td style="text-align: left;">The Global Advisory Panel on the Future of Nursing (GAPFON) was established by Sigma Theta Tau International to provide a voice and vision for the future of nursing and midwifery that advances global health. The panel aims to demonstrate how nursing and midwifery can contribute to strengthening health systems and attaining global health goals through partnerships, collaborations, and policy influence.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Democratising the media in the new democracies of Ghana and Nigeria: Challenges and prospects</td>
+<td style="text-align: left;">The paper examines the challenges and prospects of democratizing the media in Ghana and Nigeria, two countries that transitioned from military regimes to democracy in the 1990s. The author argues that historical, political, and socio-cultural factors have hindered the realization of full media reform objectives, despite Western influence on policy formulation and implementation.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Elite Institutionalism and Judicial Assertiveness in the Supreme Court of India</td>
+<td style="text-align: left;">The article examines judicial challenges to central government power in India’s Supreme Court, tracing patterns of selectivity and assertiveness in fundamental rights decisions from 1977 to 2007. It argues that a new approach called “elite institutionalism” - focusing on the values and worldviews of national elites - is necessary to explain these patterns, which shifted from liberal restoration to reform over time.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Effects of salmon on the diet and condition of stream-resident sculpins</td>
+<td style="text-align: left;">This study investigated how Pacific salmon affects the diets and condition of two dominant freshwater consumers - prickly and coastrange sculpins - across a wide gradient of salmon biomass in streams of British Columbia, Canada. The results show that sculpin diets shifted to include more salmon-derived nutrients when salmon arrived in autumn, with effects increasing with higher salmon biomass.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Significant reduction in red blood cell transfusions in a general hospital after successful implementation of a restrictive transfusion policy supported by prospective computerized order auditing</td>
+<td style="text-align: left;">A hospital implemented a revised blood transfusion policy, recommending single-unit red blood cell transfusions for non-bleeding patients with hemoglobin levels up to 7g/dL, and supported it with computerized order auditing. As a result, there was a significant reduction in total red blood cell units transfused per 1000 patient-days and a decrease in the proportion of two-unit transfusions from 47% to 15%.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">PENSION REFORM IN CHINA: CHALLENGES AND OPPORTUNITIES</td>
+<td style="text-align: left;">China’s current pension system is plagued by regional imbalance, fiscal inefficiency, social inequality, and economic unsustainability due to three-decade evolution driven by vague objectives and interest-group infighting. The paper explores reform options and discusses the challenges and opportunities for establishing a national pension system that provides basic security, multi-level options, and sustainability by 2020.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Educating into liberal peace: the International Crisis Group’s contribution to an emerging global governmentality</td>
+<td style="text-align: left;">The International Crisis Group’s reports on Indonesia have been influential in shaping policy advice to overcome violent conflicts, but their recommendations also reflect a broader liberal peace-and-state-building agenda. The paper argues that through its narrative technique, the ICG aims to educate its audience into a liberal governmentality characterized by de-politicisation of violence and promotion of liberal forms of governance.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Debating Indonesia’s<i>Reformasi</i>: Bridging “Parallel Universes”</td>
+<td style="text-align: left;">Scholars have differing interpretations on why Suharto fell and what followed in Indonesia’s transition process, with some attributing it to “people power” mobilization and others arguing for a reorganization of patrimonialism. This article seeks to bridge the gap between these two camps by reframing the oligarchy literature using transition theories, highlighting important insights into changes in post-Suharto Indonesia.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">The institutional design of river basin organizations – empirical findings from around the world</td>
+<td style="text-align: left;">This paper provides a comprehensive overview of the institutional design of all international river basin organizations (RBOs), summarizing data from the RBO Institutional Design Database. The findings contribute to research on water resources governance and policy, informing efforts to establish new or reform existing RBOs for more sustainable management of shared watercourses.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Evaluating the Possible Impact of Pension Reforms on Elderly Poverty in <scp>E</scp>urope</td>
+<td style="text-align: left;">This paper assesses the impact of pension reforms on elderly poverty in Europe using estimates of pension wealth for hypothetical cases. The findings indicate that reforms have decreased generosity significantly, especially for certain groups who may benefit from better access to labor markets and adequate crediting arrangements.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">As You Sow So Shall You Reap: From Capabilities to Opportunities</td>
+<td style="text-align: left;">The paper develops an “Index of Opportunities” for 96 non-high-income countries, which measures their capacity for economic structural transformation through four dimensions: sophistication, diversification, standardness, and possibilities for exporting new products. Countries like China, India, and Brazil score high in this index, indicating they have accumulated significant capabilities for further economic growth, while others like Guinea and Malawi struggle with lower scores.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Carbon emissions, energy consumption and output: A threshold analysis on the causal dynamics in emerging African economies</td>
+<td style="text-align: left;">This paper examines the causal dynamics among energy use, real GDP, and CO2 emissions in six emerging African economies using threshold cointegration and Granger causality techniques. The results confirm the presence of regime shift effects, indicating that structural changes have both economic and environmental effects, making integration of energy and environmental policies into development plans imperative for sustainable growth.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Fighting for a future: an actor-oriented planning approach to landscape preservation in Galicia</td>
+<td style="text-align: left;">Economic optimization in agriculture has led to reduced diversity and coherence in cultural landscapes, necessitating changes in social-ecological organization through new management regimes. An actor-oriented planning approach is explored as a way to develop a successful landscape preservation plan in Galicia, Spain, while addressing power issues and EU objectives of sustainable growth.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Financialization in Turkey: The Case of Consumer Debt</td>
+<td style="text-align: left;">This study provides an analysis of the rise in consumer debt in Turkey from a political economy perspective, arguing that it is historically unique and can be understood by considering both demand- and supply-side factors. The authors suggest that Turkish banks adapted to a changing economic environment characterized by deepening integration into the world economy by diversifying towards consumer lending, while poorer households turned to credit for everyday consumption.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Organizational Reintegration and Trust Repair after an Integrity Violation: A Case Study</td>
+<td style="text-align: left;">This paper presents a case study of a UK utilities firm’s efforts to restore trust with stakeholders following a fraud and data manipulation scandal, analyzing decisions and actions taken by the company through various themes and conceptual frameworks. The study provides novel insights on organizational identity, cultural reforms, and stakeholder salience in the reintegration process, while supporting existing frameworks and suggesting theoretical extensions for future research.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Adapting streams for climate change using riparian broadleaf trees and its consequences for stream salmonids</td>
+<td style="text-align: left;">This study examines the effects of riparian broadleaf tree cover on stream salmonids, finding no systematic impact on density, size, or terrestrial subsidy dependence. The results suggest that while broadleaf restoration may mitigate climate change impacts, it has neutral consequences for salmonid biomass and density in temperate upland headwaters.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Contract Research, Curricular Reform, and Situated Selves: Between Social Justice and Commercialized Knowledge</td>
+<td style="text-align: left;">In a reform environment marked by increased privatization of public education, contract evaluators adapt their work to connect personally with its purpose and impact social change. This adaptation intersects with macropolitical interests, raising implications for social scientific knowledge work.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">The potential of Russia to increase its wheat production through cropland expansion and intensification</td>
+<td style="text-align: left;">Russia has significant unused land resources and yield gaps, suggesting that wheat production can be substantially increased through cropland expansion and intensification. Modest increases in crop productivity and recultivation of abandoned land could increase wheat production by 9-32 million tons under rainfed conditions.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Climate change and farm-level adaptation decisions and strategies in drought-prone and groundwater-depleted areas of Bangladesh: an empirical investigation</td>
+<td style="text-align: left;">This study investigated farm-level adaptation decisions and strategies of rice farmers in drought-prone and groundwater-depleted areas of Bangladesh, finding that science-driven adaptations such as drought-tolerant rice were preferred along with environmental resource-depleting and crop-switching strategies. The study identified several factors influencing farmer’s decision to adapt, including access to climate information, education level, farm size, and irrigation facilities, and highlighted the need for stronger support systems to create an effective adaptation process to climate change.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+<section id="parallel" class="level3">
+<h3 class="anchored" data-anchor-id="parallel">Parallel</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>fn <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="st">"."</span>, <span class="st">"data"</span>, <span class="st">"summarized_parallel.rds"</span>)</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="fu">tic</span>()</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>reqs <span class="ot">&lt;-</span> <span class="fu">lapply</span>(</span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>  summarized<span class="sc">$</span>prompt,</span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">function</span>(x) {</span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>    ollamar<span class="sc">::</span><span class="fu">generate</span>(</span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>      <span class="at">model =</span> <span class="st">"llama3.1"</span>,</span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>      <span class="at">prompt =</span> x,</span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>      <span class="at">output =</span> <span class="st">"req"</span></span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a>resps <span class="ot">&lt;-</span> reqs <span class="sc">|&gt;</span></span>
+<span id="cb22-17"><a href="#cb22-17" aria-hidden="true" tabindex="-1"></a>  httr2<span class="sc">::</span><span class="fu">req_perform_parallel</span>(</span>
+<span id="cb22-18"><a href="#cb22-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">progress =</span> <span class="cn">TRUE</span></span>
+<span id="cb22-19"><a href="#cb22-19" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■                                5% | ETA:  6m</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■■■                             15% | ETA:  2m</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■■■■■■■                         25% | ETA:  2m</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■■■■■■■■                        30% | ETA:  1m</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■■■■■■■■■                       35% | ETA:  1m</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■■■■■■■■■■■                     40% | ETA:  1m</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■■■■■■■■■■■■■                   45% | ETA:  1m</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■■■■■■■■■■■■■■                  50% | ETA:  1m</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■■■■■■■■■■■■■■■                 55% | ETA: 45s</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■■■■■■■■■■■■■■■■■               60% | ETA: 39s</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■■■■■■■■■■■■■■■■■■■             65% | ETA: 34s</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■■■■■■■■■■■■■■■■■■■■            70% | ETA: 27s</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■■■■■■■■■■■■■■■■■■■■■           75% | ETA: 23s</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■■■■■■■■■■■■■■■■■■■■■■■         80% | ETA: 20s</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■■■■■■■■■■■■■■■■■■■■■■■■■■      90% | ETA:  9s</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■     95% | ETA:  4s</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100% | ETA:  0s</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>summarized<span class="sc">$</span>response <span class="ot">&lt;-</span> <span class="fu">sapply</span>(</span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>  resps,</span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>  ollamar<span class="sc">::</span>resp_process,</span>
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">"text"</span></span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a><span class="fu">toc</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>86.979 sec elapsed</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(summarized, fn)</span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>summarized <span class="sc">|&gt;</span></span>
+<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(</span>
+<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a>    title,</span>
+<span id="cb42-6"><a href="#cb42-6" aria-hidden="true" tabindex="-1"></a>    response</span>
+<span id="cb42-7"><a href="#cb42-7" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb42-8"><a href="#cb42-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb42-9"><a href="#cb42-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">response =</span> <span class="fu">gsub</span>(<span class="st">"</span><span class="sc">\n</span><span class="st">"</span>, <span class="st">" "</span>, response)</span>
+<span id="cb42-10"><a href="#cb42-10" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb42-11"><a href="#cb42-11" aria-hidden="true" tabindex="-1"></a>  knitr<span class="sc">::</span><span class="fu">kable</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<table class="caption-top table table-sm table-striped small">
+<colgroup>
+<col style="width: 26%">
+<col style="width: 73%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">title</th>
+<th style="text-align: left;">response</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Productivity Trends from 1890 to 2012 in Advanced Countries</td>
+<td style="text-align: left;">The paper examines productivity trends, breaks, and levels for 13 advanced countries from 1890-2012, identifying two major waves of productivity growth: one following the second industrial revolution and another following the ICT revolution. Productivity trend breaks are detected in response to wars, global financial crises, technological shocks, and policy changes, with the US experiencing a notable downward trend break starting in the mid-2000s.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Global Advisory Panel on the Future of Nursing (GAPFON) and Global Health</td>
+<td style="text-align: left;">The Global Advisory Panel on the Future of Nursing (GAPFON) was established to provide a voice and vision for the future of nursing and midwifery that advances global health, with a focus on strengthening health systems and attaining global health goals. GAPFON aims to stimulate partnerships and collaborations among healthcare professionals from diverse backgrounds to advance public health outcomes and support emerging Sustainable Development Goals (SDGs).</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Democratising the media in the new democracies of Ghana and Nigeria: Challenges and prospects</td>
+<td style="text-align: left;">The democratic transitions in Ghana (1992) and Nigeria (1999) led to efforts to reform their media structures from authoritarian-supporting institutions into independent ones that would facilitate public debate and political participation. However, these reforms were influenced by Western countries and donors but did not fully achieve their objectives due to historical, political, and socio-cultural factors in each country.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Elite Institutionalism and Judicial Assertiveness in the Supreme Court of India</td>
+<td style="text-align: left;">This article examines the Supreme Court of India’s challenges to central government power through its activism and assertiveness in fundamental rights decisions from 1977 to 2007, and finds that the court was selectively assertive during this period. The author proposes a new theoretical framework, “elite institutionalism,” which suggests that judges’ worldviews and attitudes are influenced by the values of national elites and the broader normative and intellectual atmosphere of courts.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Effects of salmon on the diet and condition of stream-resident sculpins</td>
+<td style="text-align: left;">Pacific salmon subsidies influenced the diets and condition of stream-resident sculpins by shifting their diet from invertebrates to salmon eggs and increasing nutrient contributions with higher salmon biomass. The effects of salmon on sculpin diet and condition varied among streams, seasons, habitats, and individual sculpin characteristics such as species and body size.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Significant reduction in red blood cell transfusions in a general hospital after successful implementation of a restrictive transfusion policy supported by prospective computerized order auditing</td>
+<td style="text-align: left;">A general hospital successfully implemented a restrictive red blood cell transfusion policy, reducing the total number of transfusions per 1000 patient-days from 60.8 to 44.2 and decreasing the proportion of 2-unit transfusions from 47% to 15%. The changes were supported by prospective computerized order auditing and real-time decision support using a revised computerized provider order entry system.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">PENSION REFORM IN CHINA: CHALLENGES AND OPPORTUNITIES</td>
+<td style="text-align: left;">China’s current pension system is plagued by regional imbalance, fiscal inefficiency, social inequality, and economic unsustainability, prompting a need for national reform by 2020. The proposed reform aims to establish a new system with “wide coverage, basic security, multi-level options, and sustainability”, but faces significant challenges and opportunities in its implementation.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Educating into liberal peace: the International Crisis Group’s contribution to an emerging global governmentality</td>
+<td style="text-align: left;">The International Crisis Group’s reports on Indonesia aim to educate their audience into a liberal governmentality characterized by practices and procedures that de-politicize violence, foster liberal forms of governance, and sustain liberalism as a global ‘regime of power’. Through their narrative technique of epideictic oratory, the ICg contributes to the diffusion of the liberal governance agenda in Indonesia.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Debating Indonesia’s<i>Reformasi</i>: Bridging “Parallel Universes”</td>
+<td style="text-align: left;">Scholars disagree over why Indonesia’s Suharto fell and what followed, with two competing interpretations: a “people power” mobilization leading to democratic reforms, versus a reorganization of patrimonialism that maintained oligarchic control. This article seeks to bridge this divide by reframing the oligarchy literature using transition theories, clarifying differences in the nature of change these camps are concerned with and stimulating more constructive engagement between them.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">The institutional design of river basin organizations – empirical findings from around the world</td>
+<td style="text-align: left;">This paper presents a comprehensive overview of the institutional design of all international river basin organizations (RBOs), summarizing data from the RBO Institutional Design Database, to contribute to research on water resources governance and inform policy on establishing new or reforming existing RBOs for sustainable management of shared watercourses. The analysis provides empirical findings on the organizational structure and mechanisms used by RBOs to govern transboundary water resources around the world.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Evaluating the Possible Impact of Pension Reforms on Elderly Poverty in <scp>E</scp>urope</td>
+<td style="text-align: left;">This article assesses the impact of pension reforms on elderly poverty in Europe by estimating pension wealth for various hypothetical cases. The results show that reforms have decreased generosity significantly, making systems less progressive and raising adequacy concerns for certain groups.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">As You Sow So Shall You Reap: From Capabilities to Opportunities</td>
+<td style="text-align: left;">This paper develops an “Index of Opportunities” for non-high-income countries to measure their capacity for economic transformation through structural change and export diversification. The index ranks countries like China, India, and Brazil high for their accumulated capabilities, while others such as Guinea and Malawi score poorly, requiring different policy approaches.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Carbon emissions, energy consumption and output: A threshold analysis on the causal dynamics in emerging African economies</td>
+<td style="text-align: left;">This paper examines the causal dynamics between energy use, real GDP, and CO2 emissions in six emerging African economies, finding regime shift effects that indicate structural changes have both economic and environmental impacts. The results suggest integrating energy and environmental policies into development plans is crucial for achieving sustainable growth and development.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Fighting for a future: an actor-oriented planning approach to landscape preservation in Galicia</td>
+<td style="text-align: left;">The paper explores opportunities for landscape preservation in Galicia, Spain, through an actor-oriented planning approach that takes into account the complex social-ecological organization of places and power issues over natural resources control. A successful planning approach is developed using a case study area, contributing to understanding how place-based development can be combined with landscape management in EU programs.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Financialization in Turkey: The Case of Consumer Debt</td>
+<td style="text-align: left;">This study examines the rise in consumer debt in Turkey from a political economy perspective, arguing that it is unique and requires an analysis of both demand- and supply-side determinants within the context of recent transformations in the Turkish economy. The supply side is characterized by banks adapting to a new economic environment through diversification into consumer lending, while the demand side is linked to relative deprivation in popular incomes leading poorer households to depend on credit for everyday consumption.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Organizational Reintegration and Trust Repair after an Integrity Violation: A Case Study</td>
+<td style="text-align: left;">This paper presents a case study of a UK utilities firm’s efforts to restore trust with stakeholders after a fraud and data manipulation scandal, analyzing decisions and actions taken towards reintegration and trust repair. The study identifies seven themes on effective approaches for reintegration and provides novel insights into organizational identity, cultural reforms, and stakeholder salience during the process.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Adapting streams for climate change using riparian broadleaf trees and its consequences for stream salmonids</td>
+<td style="text-align: left;">Researchers analyzed the effects of riparian broadleaf forest restoration on stream-dwelling salmonids and found that it had no systematic effect on their density or individual size, but may have offsetting benefits against warming related to climate change. The study also found that brown trout primarily rely on in-stream production rather than terrestrial subsidies, with variation among individual streams rather than riparian land use.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Contract Research, Curricular Reform, and Situated Selves: Between Social Justice and Commercialized Knowledge</td>
+<td style="text-align: left;">This paper explores how social scientists transition into the evaluation industry during educational reform, and how they adapt to maintain a sense of personal connection to their work despite increased privatization. The study examines the intersection of macropolitical interests with individual motivations, highlighting implications for social scientific knowledge work.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">The potential of Russia to increase its wheat production through cropland expansion and intensification</td>
+<td style="text-align: left;">Russia has the potential to increase its wheat production by 9-32 million tons through modest increases in crop productivity and recultivation of abandoned land, particularly in southern European Russia where fertile black soil is found. However, this potential is threatened by climate change, droughts, and adverse market conditions, which require improved adaptation and institutional reforms to be realized.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Climate change and farm-level adaptation decisions and strategies in drought-prone and groundwater-depleted areas of Bangladesh: an empirical investigation</td>
+<td style="text-align: left;">This study investigates farm-level adaptation strategies to climate change among 1800 Bangladeshi rice farmers, finding that science-driven, environmental resource-depleting, and crop-switching strategies are preferred methods of alleviating adverse effects. The study also identifies factors such as drought severity, education level, access to climate information, and irrigation facilities as significant determinants of farmers’ adaptation decisions.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+</section>
+<section id="sentiment-analysis" class="level2">
+<h2 class="anchored" data-anchor-id="sentiment-analysis">Sentiment Analysis</h2>
+<p>Inspired by the sentiment analysis at https://github.com/hauselin/ollama-r/</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>fn <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="st">"."</span>, <span class="st">"data"</span>, <span class="st">"sentiments.rds"</span>)</span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>reqs <span class="ot">&lt;-</span> <span class="fu">lapply</span>(</span>
+<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a>  <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(papers),</span>
+<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">function</span>(i) {</span>
+<span id="cb43-6"><a href="#cb43-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">paste0</span>(</span>
+<span id="cb43-7"><a href="#cb43-7" aria-hidden="true" tabindex="-1"></a>      <span class="st">"</span><span class="sc">\n\n</span><span class="st">I give you the title and abstract of a scientific paper."</span>,</span>
+<span id="cb43-8"><a href="#cb43-8" aria-hidden="true" tabindex="-1"></a>      <span class="st">"</span><span class="sc">\n\n</span><span class="st">Your only task/role is to evaluate the sentiment of these towards subsidies."</span>,</span>
+<span id="cb43-9"><a href="#cb43-9" aria-hidden="true" tabindex="-1"></a>      <span class="st">"</span><span class="sc">\n\n</span><span class="st">Your response should be a valid json with the following info."</span>,</span>
+<span id="cb43-10"><a href="#cb43-10" aria-hidden="true" tabindex="-1"></a>      <span class="st">"</span><span class="sc">\n\n</span><span class="st">   id: the id of the paper."</span>,</span>
+<span id="cb43-11"><a href="#cb43-11" aria-hidden="true" tabindex="-1"></a>      <span class="st">"</span><span class="sc">\n\n</span><span class="st">   sentiment: the identified response. It should be one of the following:'positive' or 'negative', or, if you find no information to evaluate the sentiment of the text, 'unknown'."</span>,</span>
+<span id="cb43-12"><a href="#cb43-12" aria-hidden="true" tabindex="-1"></a>      <span class="st">"</span><span class="sc">\n\n</span><span class="st">   strength: if sentiment is 'positive' or 'negative', a score from -10 to 10 for the sentiment (-10 most negative, 10 most positive), , otherwise -99 if sentiment is unknown,"</span>,</span>
+<span id="cb43-13"><a href="#cb43-13" aria-hidden="true" tabindex="-1"></a>      <span class="st">"</span><span class="sc">\n\n</span><span class="st">   score: if sentiment is 'positive' or 'negative', a value how confident you are in your assessment, ranging from 0 = 'not confident at all' to 10 = 'very confident', otherwise -99 if sentiment is unknown,"</span>,</span>
+<span id="cb43-14"><a href="#cb43-14" aria-hidden="true" tabindex="-1"></a>      <span class="st">"</span><span class="sc">\n\n</span><span class="st">   explanation: an explanation why you think the sentiment is that way. If the sentiment is 'unknown',"</span>,</span>
+<span id="cb43-15"><a href="#cb43-15" aria-hidden="true" tabindex="-1"></a>      <span class="st">"</span><span class="sc">\n\n</span><span class="st">   summary: a 1 sentence summary of the title and abstract, irrespective of the sentiment."</span>,</span>
+<span id="cb43-16"><a href="#cb43-16" aria-hidden="true" tabindex="-1"></a>      <span class="st">"</span><span class="sc">\n\n</span><span class="st">Do not put anything in front or behind the valid json."</span>,</span>
+<span id="cb43-17"><a href="#cb43-17" aria-hidden="true" tabindex="-1"></a>      <span class="st">"</span><span class="sc">\n\n</span><span class="st">Do not halucinate."</span>,</span>
+<span id="cb43-18"><a href="#cb43-18" aria-hidden="true" tabindex="-1"></a>      <span class="st">"</span><span class="sc">\n\n</span><span class="st">Base tour response only on the information I give you."</span>,</span>
+<span id="cb43-19"><a href="#cb43-19" aria-hidden="true" tabindex="-1"></a>      <span class="st">"</span><span class="sc">\n\n</span><span class="st">Do not summarise the information."</span>,</span>
+<span id="cb43-20"><a href="#cb43-20" aria-hidden="true" tabindex="-1"></a>      <span class="st">"</span><span class="sc">\n\n</span><span class="st">The id is:"</span>, papers<span class="sc">$</span>id[[i]],</span>
+<span id="cb43-21"><a href="#cb43-21" aria-hidden="true" tabindex="-1"></a>      <span class="st">"</span><span class="sc">\n\n</span><span class="st">The titel is:"</span>, papers<span class="sc">$</span>title[[i]],</span>
+<span id="cb43-22"><a href="#cb43-22" aria-hidden="true" tabindex="-1"></a>      <span class="st">"</span><span class="sc">\n\n</span><span class="st">The abstract is:"</span>, <span class="fu">substr</span>(papers<span class="sc">$</span>abstract[[i]], <span class="dv">1</span>, <span class="dv">3000</span>)</span>
+<span id="cb43-23"><a href="#cb43-23" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">|&gt;</span></span>
+<span id="cb43-24"><a href="#cb43-24" aria-hidden="true" tabindex="-1"></a>      ollamar<span class="sc">::</span><span class="fu">generate</span>(</span>
+<span id="cb43-25"><a href="#cb43-25" aria-hidden="true" tabindex="-1"></a>        <span class="at">model =</span> <span class="st">"llama3.1"</span>,</span>
+<span id="cb43-26"><a href="#cb43-26" aria-hidden="true" tabindex="-1"></a>        <span class="at">output =</span> <span class="st">"req"</span></span>
+<span id="cb43-27"><a href="#cb43-27" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb43-28"><a href="#cb43-28" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb43-29"><a href="#cb43-29" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb43-30"><a href="#cb43-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-31"><a href="#cb43-31" aria-hidden="true" tabindex="-1"></a><span class="fu">tic</span>()</span>
+<span id="cb43-32"><a href="#cb43-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-33"><a href="#cb43-33" aria-hidden="true" tabindex="-1"></a>sentiments <span class="ot">&lt;-</span> httr2<span class="sc">::</span><span class="fu">req_perform_parallel</span>(</span>
+<span id="cb43-34"><a href="#cb43-34" aria-hidden="true" tabindex="-1"></a>  reqs,</span>
+<span id="cb43-35"><a href="#cb43-35" aria-hidden="true" tabindex="-1"></a>  <span class="at">progress =</span> <span class="cn">TRUE</span></span>
+<span id="cb43-36"><a href="#cb43-36" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
+<span id="cb43-37"><a href="#cb43-37" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sapply</span>(</span>
+<span id="cb43-38"><a href="#cb43-38" aria-hidden="true" tabindex="-1"></a>    <span class="cf">function</span>(resp) {</span>
+<span id="cb43-39"><a href="#cb43-39" aria-hidden="true" tabindex="-1"></a>      ollamar<span class="sc">::</span><span class="fu">resp_process</span>(</span>
+<span id="cb43-40"><a href="#cb43-40" aria-hidden="true" tabindex="-1"></a>        resp,</span>
+<span id="cb43-41"><a href="#cb43-41" aria-hidden="true" tabindex="-1"></a>        <span class="at">output =</span> <span class="st">"text"</span></span>
+<span id="cb43-42"><a href="#cb43-42" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb43-43"><a href="#cb43-43" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb43-44"><a href="#cb43-44" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■                                5% | ETA:  9m</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■■■                             15% | ETA:  3m</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■■■■■                           20% | ETA:  2m</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■■■■■■■                         25% | ETA:  2m</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■■■■■■■■■■■                     40% | ETA:  1m</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■■■■■■■■■■■■■                   45% | ETA:  1m</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■■■■■■■■■■■■■■■                 55% | ETA:  1m</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■■■■■■■■■■■■■■■■■               60% | ETA:  1m</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■■■■■■■■■■■■■■■■■■■             65% | ETA: 48s</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■■■■■■■■■■■■■■■■■■■■■           75% | ETA: 32s</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■■■■■■■■■■■■■■■■■■■■■■■         80% | ETA: 27s</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■■■■■■■■■■■■■■■■■■■■■■■■■       85% | ETA: 20s</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■■■■■■■■■■■■■■■■■■■■■■■■■■      90% | ETA: 13s</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Iterating ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100% | ETA:  0s</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb58"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a><span class="fu">toc</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>122.299 sec elapsed</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb60"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a>sentiments_df <span class="ot">&lt;-</span> <span class="fu">lapply</span>(</span>
+<span id="cb60-2"><a href="#cb60-2" aria-hidden="true" tabindex="-1"></a>  sentiments,</span>
+<span id="cb60-3"><a href="#cb60-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">function</span>(resp) {</span>
+<span id="cb60-4"><a href="#cb60-4" aria-hidden="true" tabindex="-1"></a>    jsonlite<span class="sc">::</span><span class="fu">fromJSON</span>(</span>
+<span id="cb60-5"><a href="#cb60-5" aria-hidden="true" tabindex="-1"></a>      resp</span>
+<span id="cb60-6"><a href="#cb60-6" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb60-7"><a href="#cb60-7" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb60-8"><a href="#cb60-8" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
+<span id="cb60-9"><a href="#cb60-9" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">bind_rows</span>() <span class="sc">|&gt;</span></span>
+<span id="cb60-10"><a href="#cb60-10" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(</span>
+<span id="cb60-11"><a href="#cb60-11" aria-hidden="true" tabindex="-1"></a>    strength</span>
+<span id="cb60-12"><a href="#cb60-12" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb60-13"><a href="#cb60-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-14"><a href="#cb60-14" aria-hidden="true" tabindex="-1"></a>sentiments_df[sentiments_df <span class="sc">==</span> <span class="sc">-</span><span class="dv">99</span>] <span class="ot">&lt;-</span> <span class="fu">as.integer</span>(<span class="cn">NA</span>)</span>
+<span id="cb60-15"><a href="#cb60-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-16"><a href="#cb60-16" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(sentiments_df, fn)</span>
+<span id="cb60-17"><a href="#cb60-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-18"><a href="#cb60-18" aria-hidden="true" tabindex="-1"></a>sentiments_df <span class="sc">|&gt;</span></span>
+<span id="cb60-19"><a href="#cb60-19" aria-hidden="true" tabindex="-1"></a>  knitr<span class="sc">::</span><span class="fu">kable</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<table class="caption-top table table-sm table-striped small">
+<colgroup>
+<col style="width: 5%">
+<col style="width: 1%">
+<col style="width: 1%">
+<col style="width: 1%">
+<col style="width: 55%">
+<col style="width: 34%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">id</th>
+<th style="text-align: left;">sentiment</th>
+<th style="text-align: right;">strength</th>
+<th style="text-align: right;">score</th>
+<th style="text-align: left;">explanation</th>
+<th style="text-align: left;">summary</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">https://openalex.org/W1501295874</td>
+<td style="text-align: left;">unknown</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: left;">There is no information in the title and abstract about subsidies, making it impossible to evaluate the sentiment towards them.</td>
+<td style="text-align: left;">The paper studies productivity trends and convergence processes for 13 advanced countries over 1890-2012.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">https://openalex.org/W1515750961</td>
+<td style="text-align: left;">unknown</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: left;">No direct mention of subsidies or related financial concepts.</td>
+<td style="text-align: left;">The Global Advisory Panel on the Future of Nursing (GAPFON) aims to advance global health goals through nursing and midwifery contributions.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">https://openalex.org/W1520730601</td>
+<td style="text-align: left;">unknown</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: left;">There is no information in the title and abstract about subsidies, only a discussion of media reform initiatives in Ghana and Nigeria.</td>
+<td style="text-align: left;">The article examines media reform initiatives in Ghana and Nigeria after they transitioned from military to democratic regimes.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">https://openalex.org/W1584099318</td>
+<td style="text-align: left;">unknown</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: left;">The text does not mention subsidies, but rather discusses the Supreme Court of India’s activism and assertiveness in fundamental rights decisions.</td>
+<td style="text-align: left;">This article examines judicial challenges to central government power in the Supreme Court of India by analyzing activism and assertiveness in fundamental rights decisions from 1977 to 2007.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">https://openalex.org/W1876345230</td>
+<td style="text-align: left;">positive</td>
+<td style="text-align: right;">-8</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: left;">The text discusses the positive effects of salmon on the diets and condition of sculpins, highlighting how salmon subsidies can benefit freshwater food webs.</td>
+<td style="text-align: left;">A study examining the impact of salmon on the diets and condition of sculpins in British Columbia’s Great Bear Rainforest.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">https://openalex.org/W1923989173</td>
+<td style="text-align: left;">positive</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: left;">The title and abstract discuss a successful implementation of a restrictive transfusion policy supported by prospective computerized order auditing, resulting in a significant reduction in red blood cell transfusions. This suggests a positive sentiment towards the implementation of such policies.</td>
+<td style="text-align: left;">A hospital successfully implemented a restrictive transfusion policy supported by prospective computerized order auditing, reducing red blood cell transfusions.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">https://openalex.org/W1932544288</td>
+<td style="text-align: left;">unknown</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: left;">The text does not mention subsidies, but rather discusses pension system reform in China.</td>
+<td style="text-align: left;">China’s current segmented pension system is facing challenges and the country aims to establish a national pension system by 2020.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">https://openalex.org/W1970758996</td>
+<td style="text-align: left;">negative</td>
+<td style="text-align: right;">-8</td>
+<td style="text-align: right;">7</td>
+<td style="text-align: left;">The sentiment is negative because the paper discusses how the International Crisis Group’s reports and recommendations aim to diffuse the liberal governance agenda, suggesting a hidden political objective. The use of terms like ‘de-politicisation’ and ‘liberal governmentality’ also implies a critical tone.</td>
+<td style="text-align: left;">The article argues that the International Crisis Group is educating its audience into a liberal governmentality through their publications.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">https://openalex.org/W1974805814</td>
+<td style="text-align: left;">unknown</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: left;">No information is provided about subsidies to evaluate the sentiment.</td>
+<td style="text-align: left;">Scholars disagree over why Suharto fell and what Indonesia’s political transition entailed.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">https://openalex.org/W1977307647</td>
+<td style="text-align: left;">unknown</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: left;">The text does not mention subsidies, but rather discusses river basin organizations and water resources governance.</td>
+<td style="text-align: left;">This paper presents a comprehensive overview of the institutional design of international River Basin Organizations (RBOs) from around the world.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">https://openalex.org/W1985327519</td>
+<td style="text-align: left;">negative</td>
+<td style="text-align: right;">-6</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: left;">The abstract mentions that reforms have decreased generosity significantly, made systems less progressive, and raised adequacy concerns for certain groups.</td>
+<td style="text-align: left;">Pension reforms in Europe since the 1990s have had significant negative impacts on elderly poverty.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">https://openalex.org/W1988416265</td>
+<td style="text-align: left;">unknown</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: left;">The abstract does not mention subsidies directly or indirectly, making it impossible to determine the sentiment towards subsidies.</td>
+<td style="text-align: left;">The paper develops an Index of Opportunities for non-high-income countries based on their export baskets and structural transformation capabilities.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">https://openalex.org/W1990059036</td>
+<td style="text-align: left;">positive</td>
+<td style="text-align: right;">7</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: left;">The text discusses the importance of integrating energy and environmental policies into development plans to achieve sustainable growth and development, indicating a positive sentiment towards subsidies related to these areas.</td>
+<td style="text-align: left;">This paper examines the causal dynamics among energy use, real GDP, and CO2 emissions in six emerging African economies using threshold cointegration and Granger causality techniques.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">https://openalex.org/W2001095260</td>
+<td style="text-align: left;">negative</td>
+<td style="text-align: right;">-8</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: left;">The abstract mentions that economic optimisation of gross margin per hectare reduces diversity and coherence of cultural landscapes, implying a negative view on subsidies or economic prioritization.</td>
+<td style="text-align: left;">Economic optimisation in agriculture can harm cultural landscapes’ diversity and coherence.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">https://openalex.org/W2005224581</td>
+<td style="text-align: left;">unknown</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: left;">The text does not contain any information about subsidies.</td>
+<td style="text-align: left;">This study offers a political economy approach to an analysis of the rise in consumer debt by drawing on the case of Turkey.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">https://openalex.org/W2011122896</td>
+<td style="text-align: left;">unknown</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: left;">There is no mention of subsidies in the title or abstract, making it impossible to evaluate sentiment towards them.</td>
+<td style="text-align: left;">The paper presents a case study on reintegration and trust repair at a UK utilities firm after a fraud scandal.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">https://openalex.org/W2011577131</td>
+<td style="text-align: left;">negative</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: left;">The study found that riparian broadleaf forest restoration had no positive effects on salmonid density, biomass, or terrestrial subsidies, and in some cases may have negative effects.</td>
+<td style="text-align: left;">A cross-sectional analysis of stream-dwelling salmonids to examine the effect of riparian broadleaf forest restoration on their habitats.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">https://openalex.org/W2015727898</td>
+<td style="text-align: left;">unknown</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: left;">There is no direct mention of subsidies in the title or abstract, making it impossible to evaluate sentiment towards them.</td>
+<td style="text-align: left;">The study explores how social scientists transition into the evaluation industry and adapt to changes in public education.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">https://openalex.org/W2023128043</td>
+<td style="text-align: left;">negative</td>
+<td style="text-align: right;">-8</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: left;">The text mentions ‘frequently recurring droughts’ and ‘adverse market conditions’, indicating a negative sentiment towards the potential for Russia to increase its wheat production. Additionally, the need for ‘institutional and political reforms’ is seen as a hindrance.</td>
+<td style="text-align: left;">Russia has unused land resources and yield gaps that could increase wheat production by 9-32 million tons if modest crop productivity increases and abandoned croplands are recultivated.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">https://openalex.org/W2027818165</td>
+<td style="text-align: left;">positive</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: left;">The paper emphasizes the importance of agricultural subsidies as a factor in farmers’ decision to adapt to climate change, and suggests that strengthening support systems is crucial for creating an effective adaptation process.</td>
+<td style="text-align: left;">The study investigates farm-level adaptation to climate change in Bangladesh, using data from 1800 farm-households and logit models.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
